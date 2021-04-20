@@ -1,1 +1,91 @@
-This is where we will upload the code.
+%% Group 8
+load("Group08.mat")
+Qm =248.0/264.2; % m^3/day
+Qn =1252.0/264.2; % m^3/day
+b=20;%m
+d=.15;%m
+Awell=pi*b*d;%m^2
+Agrass=6400; %m^2
+dx =10.0; % m
+dy = dx;
+Hlower =383.0;
+Hupper =404.0;
+[NX,NY] =size(K);
+A =zeros(NX*NY,NX*NY);
+B =zeros(NX*NY,1);
+X =zeros(1,NX*NY);
+index_array =zeros(NX,NY);
+n =0;
+for j=1:NY
+    for i=1:NX
+        n = n +1;
+        index_array(i,j) = n;
+        X(1,n) = H(i,j);
+    end
+end
+for j=1:NY 
+    for i=1:NX 
+        row=index_array(i,j);
+        if j==1
+            B(row,1)=B(row,1)+(K(i,j)*Hlower/dy);
+            %diagonal update
+            A(row,row)=A(row,row)+(K(i,j)/dy);
+        else
+            col=index_array(i,j-1);
+            A(row,col)=-sqrt(K(i,j)*K(i,j-1))/dy;
+            %diagonal update
+            A(row,row)=A(row,row)+(sqrt(K(i,j)*K(i,j-1))/dy);
+        end
+          if j==50
+            B(row,1)=B(row,1)+(K(i,j)*Hupper/dy);
+            %diagonal updat
+            A(row,row)=A(row,row)+(K(i,j)/dy);
+          else 
+              col=index_array(i,j+1);
+            A(row,col)=-sqrt(K(i,j)*K(i,j+1))/dy;
+            %diagonal update
+            A(row,row)=A(row,row)+(sqrt(K(i,j)*K(i,j+1))/dy);
+          end
+        if i~=1
+            col=index_array(i-1,j);
+            A(row,col)=-sqrt(K(i,j)*K(i-1,j))/dx;
+            % diagnoal update
+            A(row,row)=A(row,row)+(sqrt(K(i,j)*K(i-1,j))/dx);
+        end
+        if i~=50
+            col=index_array(i+1,j);
+            A(row,col)=-sqrt(K(i,j)*K(i+1,j))/dx;
+            % diagnoal update
+            A(row,row)=A(row,row)+(sqrt(K(i,j)*K(i+1,j))/dx);
+        end
+        % add neighbors well
+        if i==29 && j==41
+            B(row,1)=B(row,1)-(Qn/Awell);
+        end
+        % add matts well
+         if i==24 && j==22
+            B(row,1)=B(row,1)-(Qm/Awell);
+         end
+         % adding the grass
+          if i>=20 && i<28 && j>=40 && j<48
+            B(row,1)=B(row,1)+(0.02*Qn/Agrass);
+          end
+    end
+end
+tol=0.0001;
+tic
+X=gs_solver_basic(A,B,X,tol);
+toc
+n=0;
+h=zeros(NX,NY);
+ for j=1:NY
+    for i=1:NX
+        n = n +1;
+        index_array(i,j) = n;
+        h(i,j)=X(1,n);
+    end
+end       
+fprintf('%02f is the head at matts well\n',h(24,22))  
+        
+     
+        
